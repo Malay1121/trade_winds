@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { GameState } from '../types/game';
-import { Scroll, Globe, MapPin } from 'lucide-react';
+import { Scroll, Globe, MapPin, Leaf } from 'lucide-react';
 
 interface EventLogProps {
   gameState: GameState;
@@ -32,13 +32,21 @@ const EventLog: React.FC<EventLogProps> = ({ gameState }) => {
                 key={`${event.id}-${index}`}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="p-3 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg"
+                className={`p-3 border rounded-lg ${
+                  event.type === 'seasonal'
+                    ? 'bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200'
+                    : 'bg-gradient-to-r from-red-50 to-orange-50 border-red-200'
+                }`}
               >
                 <div className="flex items-start gap-2">
-                  {event.type === 'global' ? (
+                  {event.type === 'global' && (
                     <Globe className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                  ) : (
+                  )}
+                  {event.type === 'local' && (
                     <MapPin className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                  )}
+                  {event.type === 'seasonal' && (
+                    <Leaf className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
                   )}
                   <div>
                     <div className="font-semibold text-sm text-gray-800">
@@ -77,8 +85,11 @@ const EventLog: React.FC<EventLogProps> = ({ gameState }) => {
                 {event.startsWith('[Global]') && (
                   <Globe className="w-3 h-3 text-red-500 inline mr-2" />
                 )}
-                {event.includes('[') && !event.startsWith('[Global]') && (
+                {event.includes('[') && !event.startsWith('[Global]') && !event.startsWith('🎪') && (
                   <MapPin className="w-3 h-3 text-orange-500 inline mr-2" />
+                )}
+                {event.startsWith('🎪') && (
+                  <Leaf className="w-3 h-3 text-purple-500 inline mr-2" />
                 )}
                 {event}
               </motion.div>

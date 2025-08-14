@@ -16,12 +16,68 @@ export interface Good {
 
 export interface GameEvent {
   id: string;
-  type: 'global' | 'local';
+  type: 'global' | 'local' | 'seasonal';
   title: string;
   description: string;
   effects: { [goodId: string]: number };
   duration: number;
   weight: number;
+}
+
+export interface Season {
+  id: string;
+  name: string;
+  description: string;
+  goodsAvailability: { [goodId: string]: number };
+  priceModifiers: { [goodId: string]: number };
+  festivalChance: number;
+  duration: number;
+}
+
+export interface TradeRecord {
+  id: string;
+  timestamp: Date;
+  type: 'buy' | 'sell';
+  goodId: string;
+  goodName: string;
+  quantity: number;
+  pricePerUnit: number;
+  totalValue: number;
+  townId: string;
+  townName: string;
+  turn: number;
+  season: string;
+}
+
+export interface RouteAnalysis {
+  fromTown: string;
+  toTown: string;
+  goodId: string;
+  goodName: string;
+  buyPrice: number;
+  sellPrice: number;
+  quantity: number;
+  profit: number;
+  profitMargin: number;
+  turn: number;
+  season: string;
+}
+
+export interface TradingStats {
+  totalTrades: number;
+  totalProfit: number;
+  totalLoss: number;
+  netProfit: number;
+  bestTrade: RouteAnalysis | null;
+  worstTrade: RouteAnalysis | null;
+  favoriteGood: string | null;
+  mostProfitableRoute: { from: string; to: string; profit: number } | null;
+  averageProfitPerTrade: number;
+  successfulTrades: number;
+  lossfulTrades: number;
+  tradesByGood: { [goodId: string]: { trades: number; profit: number; volume: number } };
+  tradesByTown: { [townId: string]: { trades: number; profit: number; volume: number } };
+  tradesBySeason: { [season: string]: { trades: number; profit: number; volume: number } };
 }
 
 export interface GameState {
@@ -37,6 +93,10 @@ export interface GameState {
   activeEvents: GameEvent[];
   eventLog: string[];
   marketPrices: { [townId: string]: { [goodId: string]: { buy: number; sell: number; available: number } } };
+  currentSeason: string;
+  seasonTurn: number;
+  tradingJournal: TradeRecord[];
+  pendingPurchases: { [goodId: string]: { price: number; town: string; turn: number; season: string } };
 }
 
 export interface TransactionResult {
