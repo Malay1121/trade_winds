@@ -1,4 +1,4 @@
-import { GameState, GameEvent, TransactionResult, TradeRecord, RouteAnalysis, TradingStats } from '../types/game';
+import { GameState, GameEvent, TransactionResult, TradeRecord, RouteAnalysis, TradingStats, PriceAlert, NewsItem, TradeOpportunity, MarketAlerts } from '../types/game';
 import { towns } from '../data/towns';
 import { goods } from '../data/goods';
 import { gameEvents } from '../data/events';
@@ -23,7 +23,6 @@ export function loadGameState(): GameState | null {
     const savedData = localStorage.getItem(SAVE_KEY);
     if (savedData) {
       const parsedData = JSON.parse(savedData);
-      // Remove the savedAt timestamp before returning
       const { savedAt, ...gameState } = parsedData;
       return gameState as GameState;
     }
@@ -55,15 +54,12 @@ export function getSaveGameInfo(): { savedAt: string } | null {
 }
 
 export function initializeGameState(): GameState {
-  // Try to load saved game first
   const savedGame = loadGameState();
   if (savedGame) {
-    // Regenerate market prices for the loaded game state
     generateMarketPrices(savedGame);
     return savedGame;
   }
 
-  // Create new game if no save exists
   return createNewGameState();
 }
 
@@ -85,19 +81,22 @@ export function createNewGameState(): GameState {
     currentSeason: 'spring',
     seasonTurn: 1,
     tradingJournal: [],
-    pendingPurchases: {}
+    pendingPurchases: {},
+    marketAlerts: {
+      priceAlerts: [],
+      news: [],
+      opportunities: [],
+      lastCheckedTurn: 1
+    }
   };
 
-  // Initialize inventor
   goods.forEach(good => {
     state.inventory[good.id] = 0;
   });
 
-  // Add initial seasonal message
   const currentSeasonData = seasons.find(s => s.id === state.currentSeason)!;
   state.eventLog.unshift(`🌱 ${currentSeasonData.name} has arrived! ${currentSeasonData.description}`);
 
-  // Generate initial market prices
   generateMarketPrices(state);
   
   return state;
@@ -106,7 +105,6 @@ export function createNewGameState(): GameState {
 export function generateMarketPrices(state: GameState): void {
   state.marketPrices = {};
   
-  // Get current season data
   const currentSeasonData = seasons.find(s => s.id === state.currentSeason)!;
   
   towns.forEach(town => {
@@ -116,11 +114,9 @@ export function generateMarketPrices(state: GameState): void {
       let basePrice = good.basePrice;
       let townModifier = town.priceModifiers[good.id] || 1.0;
       
-      // Apply seasonal modifiers
       let seasonalPriceModifier = currentSeasonData.priceModifiers[good.id] || 1.0;
       let seasonalAvailabilityModifier = currentSeasonData.goodsAvailability[good.id] || 1.0;
       
-      // Apply active event effects
       let eventModifier = 1.0;
       state.activeEvents.forEach(event => {
         if (event.effects[good.id]) {
@@ -134,30 +130,26 @@ export function generateMarketPrices(state: GameState): void {
         }
       });
       
-      // Add some random variation (±15%)
       let randomModifier = 0.85 + Math.random() * 0.3;
       
       let finalPrice = Math.round(basePrice * townModifier * seasonalPriceModifier * eventModifier * randomModifier);
       
-      // Buy price is slightly higher than sell price for the player
       let buyPrice = Math.round(finalPrice * 1.1);
       let sellPrice = Math.round(finalPrice * 0.9);
       
-      // Available quantity affected by season (random between 10-50, modified by season)
       let baseAvailable = Math.floor(Math.random() * 40) + 10;
       let available = Math.round(baseAvailable * seasonalAvailabilityModifier);
       
       state.marketPrices[town.id][good.id] = {
         buy: buyPrice,
         sell: sellPrice,
-        available: Math.max(1, available) // Ensure at least 1 available
+        available: Math.max(1, available)
       };
     });
   });
 }
 
 export function generateRandomEvent(): GameEvent | null {
-  // 30% chance of no event
   if (Math.random() > 0.7) {
     return null;
   }
@@ -178,12 +170,12 @@ export function generateRandomEvent(): GameEvent | null {
 export function generateSeasonalEvent(state: GameState): GameEvent | null {
   const currentSeasonData = seasons.find(s => s.id === state.currentSeason)!;
   
-  // Check for seasonal festival based on season's festival chance
+
   if (Math.random() < currentSeasonData.festivalChance) {
     const seasonalEvents = seasonalFestivals.filter(event => event.season === state.currentSeason);
     if (seasonalEvents.length > 0) {
       const randomEvent = seasonalEvents[Math.floor(Math.random() * seasonalEvents.length)];
-      // Convert to GameEvent format by removing the season property
+
       const { season, ...gameEvent } = randomEvent;
       return gameEvent as GameEvent;
     }
@@ -197,7 +189,7 @@ export function updateSeasons(state: GameState): void {
   
   const currentSeasonData = seasons.find(s => s.id === state.currentSeason)!;
   
-  // Check if season should change
+
   if (state.seasonTurn > currentSeasonData.duration) {
     const currentIndex = seasons.findIndex(s => s.id === state.currentSeason);
     const nextIndex = (currentIndex + 1) % seasons.length;
@@ -206,7 +198,7 @@ export function updateSeasons(state: GameState): void {
     state.currentSeason = nextSeason.id;
     state.seasonTurn = 1;
     
-    // Add seasonal change message with appropriate emoji
+
     const seasonEmojis = {
       spring: '🌱',
       summer: '☀️',
@@ -219,7 +211,7 @@ export function updateSeasons(state: GameState): void {
   }
 }
 
-// Trading Journal Functions
+
 export function recordTrade(
   state: GameState, 
   type: 'buy' | 'sell', 
@@ -247,7 +239,7 @@ export function recordTrade(
 
   state.tradingJournal.push(tradeRecord);
 
-  // For purchases, track pending purchases for profit calculation
+
   if (type === 'buy') {
     if (!state.pendingPurchases[goodId]) {
       state.pendingPurchases[goodId] = {
@@ -257,7 +249,7 @@ export function recordTrade(
         season: state.currentSeason
       };
     } else {
-      // Update with weighted average if we buy more of the same good
+
       const existingValue = state.pendingPurchases[goodId].price * (state.inventory[goodId] - quantity);
       const newValue = pricePerUnit * quantity;
       const totalQuantity = state.inventory[goodId];
@@ -265,7 +257,7 @@ export function recordTrade(
     }
   }
 
-  // Keep journal manageable (last 100 trades)
+
   if (state.tradingJournal.length > 100) {
     state.tradingJournal = state.tradingJournal.slice(-100);
   }
@@ -276,7 +268,7 @@ export function calculateRouteAnalysis(state: GameState): RouteAnalysis[] {
   const sellTrades = state.tradingJournal.filter(t => t.type === 'sell');
 
   sellTrades.forEach(sellTrade => {
-    // Find corresponding buy trade(s) for this good
+
     const buyTrades = state.tradingJournal.filter(t => 
       t.type === 'buy' && 
       t.goodId === sellTrade.goodId && 
@@ -284,7 +276,7 @@ export function calculateRouteAnalysis(state: GameState): RouteAnalysis[] {
     );
 
     if (buyTrades.length > 0) {
-      // Use the most recent buy trade
+
       const buyTrade = buyTrades[buyTrades.length - 1];
       
       const profit = (sellTrade.pricePerUnit - buyTrade.pricePerUnit) * sellTrade.quantity;
@@ -318,7 +310,7 @@ export function calculateTradingStats(state: GameState): TradingStats {
   const totalLoss = Math.abs(lossfulRoutes.reduce((sum, r) => sum + r.profit, 0));
   const netProfit = totalProfit - totalLoss;
 
-  // Calculate stats by good
+
   const tradesByGood: { [goodId: string]: { trades: number; profit: number; volume: number } } = {};
   routes.forEach(route => {
     if (!tradesByGood[route.goodId]) {
@@ -329,7 +321,7 @@ export function calculateTradingStats(state: GameState): TradingStats {
     tradesByGood[route.goodId].volume += route.quantity;
   });
 
-  // Calculate stats by town
+
   const tradesByTown: { [townId: string]: { trades: number; profit: number; volume: number } } = {};
   state.tradingJournal.forEach(trade => {
     if (!tradesByTown[trade.townId]) {
@@ -339,14 +331,14 @@ export function calculateTradingStats(state: GameState): TradingStats {
     tradesByTown[trade.townId].volume += trade.quantity;
   });
 
-  // Add profit data from routes
+
   routes.forEach(route => {
     if (tradesByTown[route.fromTown]) {
       tradesByTown[route.fromTown].profit += route.profit;
     }
   });
 
-  // Calculate stats by season
+
   const tradesBySeason: { [season: string]: { trades: number; profit: number; volume: number } } = {};
   routes.forEach(route => {
     if (!tradesBySeason[route.season]) {
@@ -357,7 +349,7 @@ export function calculateTradingStats(state: GameState): TradingStats {
     tradesBySeason[route.season].volume += route.quantity;
   });
 
-  // Find favorite good (most traded by volume)
+
   let favoriteGood = null;
   let maxVolume = 0;
   Object.entries(tradesByGood).forEach(([goodId, stats]) => {
@@ -367,7 +359,7 @@ export function calculateTradingStats(state: GameState): TradingStats {
     }
   });
 
-  // Find most profitable route
+
   let mostProfitableRoute = null;
   if (profitableRoutes.length > 0) {
     const routeProfits: { [key: string]: number } = {};
@@ -422,13 +414,13 @@ export function buyGood(state: GameState, goodId: string, quantity: number): Tra
     return { success: false, message: 'Not enough cargo space!' };
   }
   
-  // Execute transaction
+
   state.gold -= totalCost;
   state.inventory[goodId] = (state.inventory[goodId] || 0) + quantity;
   state.currentCargo += cargoNeeded;
   state.marketPrices[town.id][goodId].available -= quantity;
   
-  // Record the trade in journal
+
   recordTrade(state, 'buy', goodId, quantity, price);
   
   return {
@@ -452,12 +444,12 @@ export function sellGood(state: GameState, goodId: string, quantity: number): Tr
   
   const totalEarnings = price * quantity;
   
-  // Execute transaction
+
   state.gold += totalEarnings;
   state.inventory[goodId] -= quantity;
   state.currentCargo -= quantity;
   
-  // Record the trade in journal
+
   recordTrade(state, 'sell', goodId, quantity, price);
   
   return {
@@ -472,15 +464,15 @@ export function travelToTown(state: GameState, townId: string): void {
   state.currentTownId = townId;
   state.turn++;
   
-  // Update seasons
+
   updateSeasons(state);
   
-  // Process active events (reduce duration)
+
   state.activeEvents = state.activeEvents
     .map(event => ({ ...event, duration: event.duration - 1 }))
     .filter(event => event.duration > 0);
   
-  // Generate new regular event
+
   const newEvent = generateRandomEvent();
   if (newEvent) {
     state.activeEvents.push(newEvent);
@@ -493,28 +485,31 @@ export function travelToTown(state: GameState, townId: string): void {
     }
   }
   
-  // Generate potential seasonal event
+
   const seasonalEvent = generateSeasonalEvent(state);
   if (seasonalEvent) {
     state.activeEvents.push(seasonalEvent);
     state.eventLog.unshift(`🎪 [Festival] ${seasonalEvent.title}: ${seasonalEvent.description}`);
   }
   
-  // Regenerate market prices (now includes seasonal effects)
+
   generateMarketPrices(state);
   
-  // Check win/loss conditions
+
+  updateMarketAlerts(state);
+  
+
   if (state.gold >= state.targetGold) {
     state.gameStatus = 'won';
   } else if (state.turn > state.maxTurns) {
     state.gameStatus = 'ended';
   }
   
-  // Add travel log
+
   const town = towns.find(t => t.id === townId)!;
   state.eventLog.unshift(`Traveled to ${town.name} (Turn ${state.turn})`);
   
-  // Keep event log manageable
+
   if (state.eventLog.length > 12) {
     state.eventLog = state.eventLog.slice(0, 12);
   }
@@ -523,19 +518,225 @@ export function travelToTown(state: GameState, townId: string): void {
 export function calculateScore(state: GameState): number {
   let score = state.gold;
   
-  // Bonus for finishing early
+
   const turnsRemaining = state.maxTurns - state.turn;
   if (state.gameStatus === 'won') {
     score += turnsRemaining * 50;
   }
   
-  // Bonus for inventory value
+
   const inventoryValue = Object.entries(state.inventory).reduce((total, [goodId, quantity]) => {
     const good = goods.find(g => g.id === goodId)!;
-    return total + (quantity * good.basePrice * 0.8); // Discounted value
+    return total + (quantity * good.basePrice * 0.8);
   }, 0);
   
   score += Math.round(inventoryValue);
   
   return score;
+}
+
+
+export function createPriceAlert(state: GameState, goodId: string, targetPrice: number, alertType: 'above' | 'below'): void {
+  const good = goods.find(g => g.id === goodId);
+  if (!good) return;
+
+  const alert: PriceAlert = {
+    id: `alert_${Date.now()}_${goodId}`,
+    goodId,
+    goodName: good.name,
+    targetPrice,
+    alertType,
+    isActive: true,
+    createdTurn: state.turn
+  };
+
+  state.marketAlerts.priceAlerts.push(alert);
+}
+
+export function removePriceAlert(state: GameState, alertId: string): void {
+  state.marketAlerts.priceAlerts = state.marketAlerts.priceAlerts.filter(alert => alert.id !== alertId);
+}
+
+export function checkPriceAlerts(state: GameState): PriceAlert[] {
+  const triggeredAlerts: PriceAlert[] = [];
+  
+  state.marketAlerts.priceAlerts.forEach(alert => {
+    if (!alert.isActive) return;
+
+    const currentPrices = state.marketPrices[state.currentTownId]?.[alert.goodId];
+    if (!currentPrices) return;
+
+    const sellPrice = currentPrices.sell;
+    const buyPrice = currentPrices.buy;
+    const relevantPrice = alert.alertType === 'above' ? sellPrice : buyPrice;
+
+    const isTriggered = alert.alertType === 'above' 
+      ? relevantPrice >= alert.targetPrice
+      : relevantPrice <= alert.targetPrice;
+
+    if (isTriggered) {
+      triggeredAlerts.push(alert);
+      alert.isActive = false;
+      
+
+      const action = alert.alertType === 'above' ? 'can be sold for' : 'can be bought for';
+      state.eventLog.unshift(
+        `💰 Price Alert: ${alert.goodName} ${action} ${relevantPrice} gold (target: ${alert.targetPrice})`
+      );
+    }
+  });
+
+  return triggeredAlerts;
+}
+
+export function generateTradeOpportunities(state: GameState): TradeOpportunity[] {
+  const opportunities: TradeOpportunity[] = [];
+  const currentTown = towns.find(t => t.id === state.currentTownId)!;
+  const otherTowns = towns.filter(t => t.id !== state.currentTownId);
+
+  goods.forEach(good => {
+    const currentTownPrices = state.marketPrices[state.currentTownId]?.[good.id];
+    if (!currentTownPrices) return;
+
+    otherTowns.forEach(otherTown => {
+      const otherTownPrices = state.marketPrices[otherTown.id]?.[good.id];
+      if (!otherTownPrices) return;
+
+      const buyPrice = currentTownPrices.buy;
+      const sellPrice = otherTownPrices.sell;
+      const profit = sellPrice - buyPrice;
+      const margin = profit / buyPrice;
+
+
+      if (profit > 10 && margin > 0.15) {
+        const urgency = margin > 0.5 ? 'high' : margin > 0.3 ? 'medium' : 'low';
+        
+        const opportunity: TradeOpportunity = {
+          id: `opp_${state.turn}_${good.id}_${currentTown.id}_${otherTown.id}`,
+          type: margin > 0.4 ? 'shortage' : 'price_gap',
+          title: `${good.name}: ${currentTown.name} → ${otherTown.name}`,
+          description: `Buy for ${buyPrice}g, sell for ${sellPrice}g`,
+          sourceTownId: state.currentTownId,
+          targetTownId: otherTown.id,
+          goodId: good.id,
+          goodName: good.name,
+          sourceTownName: currentTown.name,
+          targetTownName: otherTown.name,
+          sourcePrice: buyPrice,
+          targetPrice: sellPrice,
+          potentialProfit: profit,
+          profitMargin: margin,
+          urgency,
+          validUntil: state.turn + 3
+        };
+
+        opportunities.push(opportunity);
+      }
+    });
+  });
+
+
+  return opportunities.sort((a, b) => b.profitMargin - a.profitMargin).slice(0, 5);
+}
+
+export function generateNewsItems(state: GameState): NewsItem[] {
+  const news: NewsItem[] = [];
+  const currentTown = towns.find(t => t.id === state.currentTownId)!;
+  const currentSeason = seasons.find(s => s.id === state.currentSeason)!;
+
+
+  if (Math.random() < 0.3) {
+    const weatherEvents = [
+      { title: "Favorable Winds", content: "Trade ships are arriving ahead of schedule", impact: "Increased goods availability", severity: 'low' as const },
+      { title: "Storm Warning", content: "Severe weather may disrupt trade routes", impact: "Potential supply shortages", severity: 'medium' as const },
+      { title: "Drought Conditions", content: "Agricultural goods may become scarce", impact: "Food prices rising", severity: 'high' as const }
+    ];
+    
+    const weatherEvent = weatherEvents[Math.floor(Math.random() * weatherEvents.length)];
+    news.push({
+      id: `news_weather_${state.turn}`,
+      type: 'weather',
+      title: weatherEvent.title,
+      content: weatherEvent.content,
+      impact: weatherEvent.impact,
+      severity: weatherEvent.severity,
+      turn: state.turn,
+      expiresAt: state.turn + 2,
+      townId: currentTown.id
+    });
+  }
+
+
+  state.activeEvents.forEach(event => {
+    news.push({
+      id: `news_event_${event.id}_${state.turn}`,
+      type: 'event',
+      title: event.title,
+      content: event.description,
+      impact: "Market prices affected",
+      severity: 'medium',
+      turn: state.turn,
+      expiresAt: state.turn + event.duration,
+      goodIds: Object.keys(event.effects)
+    });
+  });
+
+
+  if (Math.random() < 0.4) {
+    const volatileGoods = goods.filter(good => {
+      const prices = state.marketPrices[state.currentTownId]?.[good.id];
+      return prices && (prices.buy > good.basePrice * 1.2 || prices.buy < good.basePrice * 0.8);
+    });
+
+    if (volatileGoods.length > 0) {
+      const good = volatileGoods[Math.floor(Math.random() * volatileGoods.length)];
+      const prices = state.marketPrices[state.currentTownId][good.id];
+      const isHigh = prices.buy > good.basePrice * 1.1;
+
+      news.push({
+        id: `news_price_${good.id}_${state.turn}`,
+        type: 'price_change',
+        title: `${good.name} Prices ${isHigh ? 'Soar' : 'Plummet'}`,
+        content: `${good.name} is trading at ${isHigh ? 'premium' : 'discount'} rates in ${currentTown.name}`,
+        impact: isHigh ? "Great selling opportunity" : "Excellent buying opportunity",
+        severity: isHigh ? 'medium' : 'low',
+        turn: state.turn,
+        expiresAt: state.turn + 2,
+        townId: currentTown.id,
+        goodIds: [good.id]
+      });
+    }
+  }
+
+  return news;
+}
+
+export function updateMarketAlerts(state: GameState): void {
+  if (state.marketAlerts.lastCheckedTurn >= state.turn) return;
+
+
+  checkPriceAlerts(state);
+
+
+  const opportunities = generateTradeOpportunities(state);
+  state.marketAlerts.opportunities = opportunities;
+
+
+  const news = generateNewsItems(state);
+  
+
+  state.marketAlerts.news = [
+    ...news,
+    ...state.marketAlerts.news.filter(item => item.expiresAt > state.turn)
+  ].slice(0, 10);
+
+  state.marketAlerts.lastCheckedTurn = state.turn;
+}
+
+export function getActiveAlerts(state: GameState): { alerts: PriceAlert[]; opportunities: TradeOpportunity[]; news: NewsItem[] } {
+  return {
+    alerts: state.marketAlerts.priceAlerts.filter(alert => alert.isActive),
+    opportunities: state.marketAlerts.opportunities.filter(opp => opp.validUntil > state.turn),
+    news: state.marketAlerts.news.filter(item => item.expiresAt > state.turn)
+  };
 }

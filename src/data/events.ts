@@ -1,7 +1,7 @@
 import { GameEvent } from '../types/game';
 
 export const gameEvents: GameEvent[] = [
-  // Global Events
+
   {
     id: 'war_outbreak',
     type: 'global',
@@ -47,7 +47,7 @@ export const gameEvents: GameEvent[] = [
     duration: 2,
     weight: 18
   },
-  // Local Events
+
   {
     id: 'festival_northport',
     type: 'local',

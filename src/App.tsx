@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { GameState, TransactionResult } from './types/game';
 import { initializeGameState, buyGood, sellGood, travelToTown, saveGameState, hasSavedGame, getSaveGameInfo, deleteSavedGame, createNewGameState } from './utils/gameLogic';
 import GameDashboard from './components/GameDashboard';
@@ -12,14 +12,11 @@ function App() {
   const [message, setMessage] = useState<string | null>(null);
   const [gameStarted, setGameStarted] = useState(false);
 
-  // Initialize game on mount
   useEffect(() => {
     const hasGame = hasSavedGame();
     if (hasGame) {
-      // If there's a saved game, show the start screen to let user choose
       setGameStarted(false);
     } else {
-      // If no saved game, start fresh
       setGameState(initializeGameState());
       setGameStarted(true);
     }
@@ -104,6 +101,11 @@ function App() {
     setGameStarted(true);
   }, []);
 
+  const handleUpdateGameState = useCallback((newState: GameState) => {
+    setGameState(newState);
+    saveGameState(newState);
+  }, []);
+
   const handleNewGame = useCallback(() => {
     deleteSavedGame();
     setGameState(createNewGameState());
@@ -115,7 +117,6 @@ function App() {
     setGameStarted(true);
   }, []);
 
-  // Show start screen if game hasn't started
   if (!gameStarted) {
     return (
       <StartScreen
@@ -127,7 +128,6 @@ function App() {
     );
   }
 
-  // Show loading if gameState is not ready
   if (!gameState) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-100 flex items-center justify-center">
@@ -136,7 +136,6 @@ function App() {
     );
   }
 
-  // Check if game should end
   if (gameState.gameStatus !== 'playing') {
     return (
       <SummaryScreen 
@@ -148,7 +147,6 @@ function App() {
 
   return (
     <div className="relative">
-      {/* Message Toast */}
       {message && (
         <div className="fixed top-4 right-4 z-50 bg-white/90 backdrop-blur-sm border border-amber-200 text-gray-800 px-4 py-2 rounded-lg shadow-lg">
           {message}
@@ -162,6 +160,7 @@ function App() {
         onTravel={handleTravel}
         onSave={handleSave}
         onRestart={handleRestart}
+        onUpdateGameState={handleUpdateGameState}
       />
 
       {showTravelView && (

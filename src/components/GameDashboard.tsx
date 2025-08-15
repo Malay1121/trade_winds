@@ -2,13 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { GameState } from '../types/game';
+import { getActiveAlerts } from '../utils/gameLogic';
 import { towns } from '../data/towns';
 import { seasons } from '../data/seasons';
-import { MapPin, Coins, Package, Clock, Save, RotateCcw, Menu, BookOpen } from 'lucide-react';
+import { MapPin, Coins, Package, Clock, Save, RotateCcw, Menu, BookOpen, Bell } from 'lucide-react';
 import MarketTable from './MarketTable';
 import InventoryPanel from './InventoryPanel';
 import EventLog from './EventLog';
 import { TradingJournal } from './TradingJournal';
+import MarketAlerts from './MarketAlerts';
 
 interface GameDashboardProps {
   gameState: GameState;
@@ -17,6 +19,7 @@ interface GameDashboardProps {
   onTravel: () => void;
   onSave: () => void;
   onRestart: () => void;
+  onUpdateGameState: (newState: GameState) => void;
 }
 
 const GameDashboard: React.FC<GameDashboardProps> = ({
@@ -25,20 +28,24 @@ const GameDashboard: React.FC<GameDashboardProps> = ({
   onSell,
   onTravel,
   onSave,
-  onRestart
+  onRestart,
+  onUpdateGameState
 }) => {
   const currentTown = towns.find(t => t.id === gameState.currentTownId)!;
   const currentSeasonData = seasons.find(s => s.id === gameState.currentSeason)!;
   const progressPercentage = (gameState.turn / gameState.maxTurns) * 100;
   const cargoPercentage = (gameState.currentCargo / gameState.cargoLimit) * 100;
+  const { alerts, opportunities, news } = getActiveAlerts(gameState);
+  const totalAlerts = alerts.length + opportunities.length + news.length;
   const [showMenu, setShowMenu] = useState(false);
   const [showTradingJournal, setShowTradingJournal] = useState(false);
+  const [showMarketAlerts, setShowMarketAlerts] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
-  // Season emoji mapping
+
   const seasonEmojis = {
     spring: '🌱',
     summer: '☀️', 
@@ -48,12 +55,12 @@ const GameDashboard: React.FC<GameDashboardProps> = ({
   
   const seasonEmoji = seasonEmojis[gameState.currentSeason as keyof typeof seasonEmojis] || '🌍';
 
-  // Close menu when clicking outside
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
       
-      // Check if click is outside both the button and the dropdown menu
+
       if (showMenu && 
           buttonRef.current && !buttonRef.current.contains(target) &&
           dropdownRef.current && !dropdownRef.current.contains(target)) {
@@ -89,7 +96,7 @@ const GameDashboard: React.FC<GameDashboardProps> = ({
     if (!showMenu && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setMenuPosition({
-        x: rect.right - 160, // Align right edge of menu with button
+        x: rect.right - 160,
         y: rect.bottom + 8
       });
     }
@@ -162,10 +169,15 @@ const GameDashboard: React.FC<GameDashboardProps> = ({
                 <button
                   ref={buttonRef}
                   onClick={handleMenuToggle}
-                  className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors relative"
                   title="Game Menu"
                 >
                   <Menu className="w-5 h-5" />
+                  {totalAlerts > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {totalAlerts > 9 ? '9+' : totalAlerts}
+                    </span>
+                  )}
                 </button>
 
                 {showMenu && createPortal(
@@ -192,6 +204,21 @@ const GameDashboard: React.FC<GameDashboardProps> = ({
                     >
                       <BookOpen className="w-4 h-4 text-amber-600" />
                       Trading Journal
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMarketAlerts(true);
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition-colors relative"
+                    >
+                      <Bell className="w-4 h-4 text-blue-600" />
+                      Market Alerts
+                      {totalAlerts > 0 && (
+                        <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] h-5 flex items-center justify-center">
+                          {totalAlerts > 99 ? '99+' : totalAlerts}
+                        </span>
+                      )}
                     </button>
                     <button
                       onClick={handleSave}
@@ -257,6 +284,15 @@ const GameDashboard: React.FC<GameDashboardProps> = ({
           <TradingJournal
             gameState={gameState}
             onClose={() => setShowTradingJournal(false)}
+          />
+        )}
+
+        {/* Market Alerts Modal */}
+        {showMarketAlerts && (
+          <MarketAlerts
+            gameState={gameState}
+            onClose={() => setShowMarketAlerts(false)}
+            onUpdateGameState={onUpdateGameState}
           />
         )}
       </div>

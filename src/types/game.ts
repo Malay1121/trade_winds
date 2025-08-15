@@ -49,6 +49,55 @@ export interface TradeRecord {
   season: string;
 }
 
+export interface PriceAlert {
+  id: string;
+  goodId: string;
+  goodName: string;
+  targetPrice: number;
+  alertType: 'above' | 'below';
+  isActive: boolean;
+  createdTurn: number;
+}
+
+export interface NewsItem {
+  id: string;
+  type: 'event' | 'price_change' | 'opportunity' | 'weather';
+  title: string;
+  content: string;
+  impact: string;
+  severity: 'low' | 'medium' | 'high';
+  turn: number;
+  expiresAt: number;
+  townId?: string;
+  goodIds?: string[];
+}
+
+export interface TradeOpportunity {
+  id: string;
+  type: 'price_gap' | 'shortage' | 'surplus' | 'seasonal';
+  title: string;
+  description: string;
+  sourceTownId: string;
+  targetTownId: string;
+  goodId: string;
+  goodName: string;
+  sourceTownName: string;
+  targetTownName: string;
+  sourcePrice: number;
+  targetPrice: number;
+  potentialProfit: number;
+  profitMargin: number;
+  urgency: 'low' | 'medium' | 'high';
+  validUntil: number;
+}
+
+export interface MarketAlerts {
+  priceAlerts: PriceAlert[];
+  news: NewsItem[];
+  opportunities: TradeOpportunity[];
+  lastCheckedTurn: number;
+}
+
 export interface RouteAnalysis {
   fromTown: string;
   toTown: string;
@@ -97,6 +146,7 @@ export interface GameState {
   seasonTurn: number;
   tradingJournal: TradeRecord[];
   pendingPurchases: { [goodId: string]: { price: number; town: string; turn: number; season: string } };
+  marketAlerts: MarketAlerts;
 }
 
 export interface TransactionResult {

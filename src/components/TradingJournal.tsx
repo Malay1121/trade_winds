@@ -18,7 +18,7 @@ export const TradingJournal: React.FC<TradingJournalProps> = ({ gameState, onClo
   const routeAnalysis = calculateRouteAnalysis(gameState);
   const tradingStats = calculateTradingStats(gameState);
 
-  // Helper functions to get names by ID
+
   const getGoodName = (goodId: string) => {
     const good = goods.find(g => g.id === goodId);
     return good ? good.name : goodId;

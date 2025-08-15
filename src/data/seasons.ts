@@ -7,7 +7,7 @@ export const seasons: Season[] = [
     description: 'Renewal and growth season. Fresh fish abundant, early crops available.',
     goodsAvailability: {
       fish: 1.3,
-      grain: 0.8, // Last year\'s stores running low
+      grain: 0.8,
       salt: 1.1,
       silk: 1.0,
       spices: 1.0,
@@ -15,8 +15,8 @@ export const seasons: Season[] = [
       gems: 1.0
     },
     priceModifiers: {
-      fish: 0.8, // Abundant, cheaper
-      grain: 1.2, // Scarce, expensive
+      fish: 0.8,
+      grain: 1.2,
       salt: 0.9,
       silk: 1.0,
       spices: 1.0,
@@ -32,21 +32,21 @@ export const seasons: Season[] = [
     description: 'Peak trading season. Luxury goods in high demand for festivals.',
     goodsAvailability: {
       fish: 1.2,
-      grain: 0.7, // Pre-harvest scarcity
+      grain: 0.7,
       salt: 1.2,
       silk: 1.1,
       spices: 1.1,
-      iron: 1.1, // Mining season
+      iron: 1.1,
       gems: 1.2
     },
     priceModifiers: {
       fish: 0.9,
-      grain: 1.3, // Very expensive before harvest
+      grain: 1.3,
       salt: 1.0,
-      silk: 1.2, // Festival demand
-      spices: 1.3, // Festival demand
+      silk: 1.2,
+      spices: 1.3,
       iron: 0.9,
-      gems: 1.4 // Wedding season
+      gems: 1.4
     },
     festivalChance: 0.5,
     duration: 5
@@ -57,8 +57,8 @@ export const seasons: Season[] = [
     description: 'Harvest season. Grain abundant, preservation goods in demand.',
     goodsAvailability: {
       fish: 1.0,
-      grain: 1.5, // Harvest time!
-      salt: 1.3, // Needed for preservation
+      grain: 1.5,
+      salt: 1.3,
       silk: 1.0,
       spices: 1.0,
       iron: 1.0,
@@ -66,14 +66,14 @@ export const seasons: Season[] = [
     },
     priceModifiers: {
       fish: 1.0,
-      grain: 0.6, // Very cheap after harvest
-      salt: 1.1, // Higher demand for preservation
+      grain: 0.6,
+      salt: 1.1,
       silk: 0.9,
       spices: 0.9,
       iron: 1.0,
       gems: 0.9
     },
-    festivalChance: 0.4, // Harvest festivals
+    festivalChance: 0.4,
     duration: 5
   },
   {
@@ -81,30 +81,30 @@ export const seasons: Season[] = [
     name: 'Winter',
     description: 'Harsh season. Preserved goods essential, luxury trade slows.',
     goodsAvailability: {
-      fish: 0.7, // Harder to catch
-      grain: 1.2, // From storage
+      fish: 0.7,
+      grain: 1.2,
       salt: 1.0,
-      silk: 0.8, // Less trading
-      spices: 0.7, // Trade routes difficult
-      iron: 0.8, // Mining reduced
+      silk: 0.8,
+      spices: 0.7,
+      iron: 0.8,
       gems: 0.7
     },
     priceModifiers: {
-      fish: 1.3, // Scarce and valuable
+      fish: 1.3,
       grain: 1.0,
-      salt: 1.2, // Essential for preservation
+      salt: 1.2,
       silk: 1.1,
-      spices: 1.4, // Exotic and rare in winter
+      spices: 1.4,
       iron: 1.1,
       gems: 1.1
     },
-    festivalChance: 0.2, // Winter solstice celebrations
+    festivalChance: 0.2,
     duration: 5
   }
 ];
 
 export const seasonalFestivals = [
-  // Spring festivals
+
   {
     id: 'spring_renewal',
     type: 'seasonal' as const,
@@ -115,7 +115,7 @@ export const seasonalFestivals = [
     weight: 100,
     season: 'spring'
   },
-  // Summer festivals
+
   {
     id: 'midsummer_fair',
     type: 'seasonal' as const,
@@ -136,7 +136,7 @@ export const seasonalFestivals = [
     weight: 100,
     season: 'summer'
   },
-  // Autumn festivals
+
   {
     id: 'harvest_celebration',
     type: 'seasonal' as const,
@@ -147,7 +147,7 @@ export const seasonalFestivals = [
     weight: 100,
     season: 'autumn'
   },
-  // Winter festivals
+
   {
     id: 'winter_solstice',
     type: 'seasonal' as const,
