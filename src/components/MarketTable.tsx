@@ -42,17 +42,104 @@ const MarketTable: React.FC<MarketTableProps> = ({ gameState, onBuy, onSell }) =
       transition={{ delay: 0.1 }}
       className="bg-white/90 backdrop-blur-sm rounded-lg shadow-lg border border-amber-200 overflow-hidden"
     >
-      <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white p-6">
-        <h2 className="text-2xl font-bold font-serif">
+      <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white p-3 sm:p-4 lg:p-6">
+        <h2 className="text-lg sm:text-xl lg:text-2xl font-bold font-serif">
           {currentTown.name} Market
         </h2>
-        <p className="text-amber-100 mt-1">
+        <p className="text-amber-100 mt-1 text-xs sm:text-sm">
           Specializes in: {currentTown.specialties.join(', ')}
         </p>
       </div>
 
-      <div className="p-6">
-        <div className="overflow-x-auto">
+      <div className="p-3 sm:p-4 lg:p-6">
+        {/* Mobile Card Layout */}
+        <div className="block md:hidden space-y-3">
+          {goods.map((good, index) => {
+            const price = marketData[good.id];
+            const quantity = getQuantity(good.id);
+            const owned = gameState.inventory[good.id] || 0;
+            
+            return (
+              <motion.div
+                key={good.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-800 text-lg">{good.name}</span>
+                    {getTrendIcon(good.id)}
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-gray-500">You own</div>
+                    <div className="font-bold text-blue-600">{owned}</div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 mb-3">
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500 mb-1">Buy Price</div>
+                    <div className="font-semibold text-green-600">{price.buy}g</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500 mb-1">Sell Price</div>
+                    <div className="font-semibold text-orange-600">{price.sell}g</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500 mb-1">Available</div>
+                    <div className="font-semibold text-gray-700">{price.available}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500 mb-1">Quantity</div>
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => handleQuantityChange(good.id, -1)}
+                        className="w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 text-sm font-bold"
+                      >
+                        -
+                      </button>
+                      <span className="w-8 text-center font-semibold">{quantity}</span>
+                      <button
+                        onClick={() => handleQuantityChange(good.id, 1)}
+                        className="w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 text-sm font-bold"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => onBuy(good.id, quantity)}
+                    disabled={
+                      price.available < quantity ||
+                      gameState.gold < price.buy * quantity ||
+                      gameState.currentCargo + quantity > gameState.cargoLimit
+                    }
+                    className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm px-3 py-2 rounded-md flex items-center justify-center gap-1 transition-colors"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    Buy ({price.buy * quantity}g)
+                  </button>
+                  <button
+                    onClick={() => onSell(good.id, Math.min(quantity, owned))}
+                    disabled={owned < quantity}
+                    className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm px-3 py-2 rounded-md flex items-center justify-center gap-1 transition-colors"
+                  >
+                    <DollarSign className="w-4 h-4" />
+                    Sell ({price.sell * Math.min(quantity, owned)}g)
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        {/* Desktop Table Layout */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b-2 border-amber-200">

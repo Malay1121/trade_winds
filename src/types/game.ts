@@ -98,6 +98,29 @@ export interface MarketAlerts {
   lastCheckedTurn: number;
 }
 
+export interface TownReputation {
+  townId: string;
+  points: number;
+  status: 'blacklisted' | 'poor' | 'neutral' | 'good' | 'excellent' | 'vip';
+  priceModifier: number;
+  exclusiveGoodsAccess: string[];
+}
+
+export interface ReputationEvent {
+  id: string;
+  townId: string;
+  action: string;
+  pointsChanged: number;
+  timestamp: number;
+  description: string;
+}
+
+export interface ReputationSystem {
+  globalReputation: number;
+  townReputations: { [townId: string]: TownReputation };
+  reputationEvents: ReputationEvent[];
+}
+
 export interface RouteAnalysis {
   fromTown: string;
   toTown: string;
@@ -147,6 +170,7 @@ export interface GameState {
   tradingJournal: TradeRecord[];
   pendingPurchases: { [goodId: string]: { price: number; town: string; turn: number; season: string } };
   marketAlerts: MarketAlerts;
+  reputation: ReputationSystem;
 }
 
 export interface TransactionResult {

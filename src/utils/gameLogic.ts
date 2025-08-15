@@ -1,4 +1,4 @@
-import { GameState, GameEvent, TransactionResult, TradeRecord, RouteAnalysis, TradingStats, PriceAlert, NewsItem, TradeOpportunity, MarketAlerts } from '../types/game';
+import { GameState, GameEvent, TransactionResult, TradeRecord, RouteAnalysis, TradingStats, PriceAlert, NewsItem, TradeOpportunity, TownReputation, ReputationEvent, ReputationSystem } from '../types/game';
 import { towns } from '../data/towns';
 import { goods } from '../data/goods';
 import { gameEvents } from '../data/events';
@@ -24,6 +24,12 @@ export function loadGameState(): GameState | null {
     if (savedData) {
       const parsedData = JSON.parse(savedData);
       const { savedAt, ...gameState } = parsedData;
+      
+      // Migration: Add reputation system to old save files
+      if (!gameState.reputation) {
+        gameState.reputation = initializeReputationSystem();
+      }
+      
       return gameState as GameState;
     }
   } catch (error) {
@@ -87,7 +93,8 @@ export function createNewGameState(): GameState {
       news: [],
       opportunities: [],
       lastCheckedTurn: 1
-    }
+    },
+    reputation: initializeReputationSystem()
   };
 
   goods.forEach(good => {
@@ -396,11 +403,20 @@ export function calculateTradingStats(state: GameState): TradingStats {
 export function buyGood(state: GameState, goodId: string, quantity: number): TransactionResult {
   const town = towns.find(t => t.id === state.currentTownId)!;
   const good = goods.find(g => g.id === goodId)!;
-  const price = state.marketPrices[town.id][goodId].buy;
+  const basePrice = state.marketPrices[town.id][goodId].buy;
   const available = state.marketPrices[town.id][goodId].available;
+  
+  // Apply reputation modifier to price
+  const reputation = getTownReputation(state, town.id);
+  const price = Math.round(basePrice * reputation.priceModifier);
   
   const totalCost = price * quantity;
   const cargoNeeded = quantity;
+  
+  // Check if player has access to exclusive goods
+  if (good.category === 'luxury' && reputation.exclusiveGoodsAccess.length === 0 && reputation.status !== 'vip') {
+    return { success: false, message: `Need better reputation to buy ${good.name}!` };
+  }
   
   if (quantity > available) {
     return { success: false, message: `Only ${available} ${good.name} available!` };
@@ -413,15 +429,16 @@ export function buyGood(state: GameState, goodId: string, quantity: number): Tra
   if (state.currentCargo + cargoNeeded > state.cargoLimit) {
     return { success: false, message: 'Not enough cargo space!' };
   }
-  
 
   state.gold -= totalCost;
   state.inventory[goodId] = (state.inventory[goodId] || 0) + quantity;
   state.currentCargo += cargoNeeded;
   state.marketPrices[town.id][goodId].available -= quantity;
-  
 
   recordTrade(state, 'buy', goodId, quantity, price);
+  
+  // Update reputation for trading (small positive gain)
+  updateReputation(state, town.id, 1, `Purchased ${quantity} ${good.name}`);
   
   return {
     success: true,
@@ -434,7 +451,11 @@ export function buyGood(state: GameState, goodId: string, quantity: number): Tra
 export function sellGood(state: GameState, goodId: string, quantity: number): TransactionResult {
   const town = towns.find(t => t.id === state.currentTownId)!;
   const good = goods.find(g => g.id === goodId)!;
-  const price = state.marketPrices[town.id][goodId].sell;
+  const basePrice = state.marketPrices[town.id][goodId].sell;
+  
+  // Apply reputation modifier to price (better reputation = higher selling prices)
+  const reputation = getTownReputation(state, town.id);
+  const price = Math.round(basePrice / reputation.priceModifier); // Inverse for selling
   
   const currentQuantity = state.inventory[goodId] || 0;
   
@@ -443,14 +464,15 @@ export function sellGood(state: GameState, goodId: string, quantity: number): Tr
   }
   
   const totalEarnings = price * quantity;
-  
 
   state.gold += totalEarnings;
   state.inventory[goodId] -= quantity;
   state.currentCargo -= quantity;
-  
 
   recordTrade(state, 'sell', goodId, quantity, price);
+  
+  // Update reputation for trading (small positive gain)
+  updateReputation(state, town.id, 1, `Sold ${quantity} ${good.name}`);
   
   return {
     success: true,
@@ -642,8 +664,6 @@ export function generateTradeOpportunities(state: GameState): TradeOpportunity[]
 export function generateNewsItems(state: GameState): NewsItem[] {
   const news: NewsItem[] = [];
   const currentTown = towns.find(t => t.id === state.currentTownId)!;
-  const currentSeason = seasons.find(s => s.id === state.currentSeason)!;
-
 
   if (Math.random() < 0.3) {
     const weatherEvents = [
@@ -739,4 +759,102 @@ export function getActiveAlerts(state: GameState): { alerts: PriceAlert[]; oppor
     opportunities: state.marketAlerts.opportunities.filter(opp => opp.validUntil > state.turn),
     news: state.marketAlerts.news.filter(item => item.expiresAt > state.turn)
   };
+}
+
+// Reputation System Functions
+export function initializeReputationSystem(): ReputationSystem {
+  const townReputations: { [townId: string]: TownReputation } = {};
+  
+  towns.forEach(town => {
+    townReputations[town.id] = {
+      townId: town.id,
+      points: 50, // Start with neutral reputation
+      status: 'neutral',
+      priceModifier: 1.0,
+      exclusiveGoodsAccess: []
+    };
+  });
+
+  return {
+    globalReputation: 50,
+    townReputations,
+    reputationEvents: []
+  };
+}
+
+export function getTownReputation(state: GameState, townId: string): TownReputation {
+  return state.reputation.townReputations[townId] || {
+    townId,
+    points: 50,
+    status: 'neutral',
+    priceModifier: 1.0,
+    exclusiveGoodsAccess: []
+  };
+}
+
+export function updateReputation(state: GameState, townId: string, pointsChange: number, action: string): void {
+  const townRep = getTownReputation(state, townId);
+  
+  // Update town reputation points
+  townRep.points = Math.max(-100, Math.min(100, townRep.points + pointsChange));
+  
+  // Update status based on points
+  if (townRep.points <= -80) {
+    townRep.status = 'blacklisted';
+    townRep.priceModifier = 1.5; // 50% price penalty
+    townRep.exclusiveGoodsAccess = [];
+  } else if (townRep.points <= -40) {
+    townRep.status = 'poor';
+    townRep.priceModifier = 1.2; // 20% price penalty
+    townRep.exclusiveGoodsAccess = [];
+  } else if (townRep.points <= 20) {
+    townRep.status = 'neutral';
+    townRep.priceModifier = 1.0;
+    townRep.exclusiveGoodsAccess = [];
+  } else if (townRep.points <= 60) {
+    townRep.status = 'good';
+    townRep.priceModifier = 0.9; // 10% discount
+    townRep.exclusiveGoodsAccess = [];
+  } else if (townRep.points <= 85) {
+    townRep.status = 'excellent';
+    townRep.priceModifier = 0.8; // 20% discount
+    townRep.exclusiveGoodsAccess = ['gems'];
+  } else {
+    townRep.status = 'vip';
+    townRep.priceModifier = 0.7; // 30% discount
+    townRep.exclusiveGoodsAccess = ['gems', 'exotic_spices', 'rare_books'];
+  }
+
+  // Update town reputation in state
+  state.reputation.townReputations[townId] = townRep;
+  
+  // Update global reputation (weighted average)
+  const totalPoints = Object.values(state.reputation.townReputations).reduce((sum, rep) => sum + rep.points, 0);
+  state.reputation.globalReputation = Math.round(totalPoints / towns.length);
+  
+  // Add reputation event
+  if (pointsChange !== 0) {
+    const event: ReputationEvent = {
+      id: `rep_${townId}_${state.turn}_${Date.now()}`,
+      townId,
+      action,
+      pointsChanged: pointsChange,
+      timestamp: state.turn,
+      description: `${action} in ${towns.find(t => t.id === townId)?.name}: ${pointsChange > 0 ? '+' : ''}${pointsChange} reputation`
+    };
+    
+    state.reputation.reputationEvents.push(event);
+    
+    // Keep only last 50 events
+    if (state.reputation.reputationEvents.length > 50) {
+      state.reputation.reputationEvents = state.reputation.reputationEvents.slice(-50);
+    }
+  }
+
+  // Add log message for significant reputation changes
+  if (Math.abs(pointsChange) >= 5) {
+    const townName = towns.find(t => t.id === townId)?.name || townId;
+    const changeText = pointsChange > 0 ? 'improved' : 'deteriorated';
+    state.eventLog.unshift(`📊 Your reputation in ${townName} has ${changeText} (${pointsChange > 0 ? '+' : ''}${pointsChange})`);
+  }
 }

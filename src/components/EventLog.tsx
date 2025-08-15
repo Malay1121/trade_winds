@@ -13,11 +13,11 @@ const EventLog: React.FC<EventLogProps> = ({ gameState }) => {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 0.4 }}
-      className="bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-6 border border-amber-200"
+      className="bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4 sm:p-6 border border-amber-200"
     >
       <div className="flex items-center gap-2 mb-4">
-        <Scroll className="text-amber-600 w-6 h-6" />
-        <h3 className="text-xl font-bold text-gray-800 font-serif">Recent Events</h3>
+        <Scroll className="text-amber-600 w-5 h-5 sm:w-6 sm:h-6" />
+        <h3 className="text-lg sm:text-xl font-bold text-gray-800 font-serif">Recent Events</h3>
       </div>
 
       {/* Active Events */}
@@ -80,7 +80,7 @@ const EventLog: React.FC<EventLogProps> = ({ gameState }) => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="p-2 bg-gray-50 border border-gray-200 rounded text-sm text-gray-700"
+                className="p-2 sm:p-3 bg-gray-50 border border-gray-200 rounded text-xs sm:text-sm text-gray-700"
               >
                 {event.startsWith('[Global]') && (
                   <Globe className="w-3 h-3 text-red-500 inline mr-2" />

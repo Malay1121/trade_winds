@@ -28,23 +28,23 @@ const InventoryPanel: React.FC<InventoryPanelProps> = ({ gameState }) => {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 0.2 }}
-      className="bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-6 border border-amber-200"
+      className="bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4 sm:p-6 border border-amber-200"
     >
       <div className="flex items-center gap-2 mb-4">
-        <Package className="text-blue-600 w-6 h-6" />
-        <h3 className="text-xl font-bold text-gray-800 font-serif">Inventory</h3>
+        <Package className="text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
+        <h3 className="text-lg sm:text-xl font-bold text-gray-800 font-serif">Inventory</h3>
       </div>
 
       {/* Progress to Target */}
-      <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200">
+      <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200">
         <div className="flex items-center gap-2 mb-2">
-          <Target className="text-amber-600 w-5 h-5" />
-          <span className="font-semibold text-gray-800">Goal Progress</span>
+          <Target className="text-amber-600 w-4 h-4 sm:w-5 sm:h-5" />
+          <span className="font-semibold text-gray-800 text-sm sm:text-base">Goal Progress</span>
         </div>
-        <div className="text-sm text-gray-600 mb-2">
+        <div className="text-xs sm:text-sm text-gray-600 mb-2">
           {gameState.gold} / {gameState.targetGold} Gold ({Math.round(progressToTarget)}%)
         </div>
-        <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+        <div className="w-full h-2 sm:h-3 bg-gray-200 rounded-full overflow-hidden">
           <motion.div
             className="h-full bg-gradient-to-r from-amber-400 to-orange-500"
             initial={{ width: 0 }}
@@ -71,11 +71,11 @@ const InventoryPanel: React.FC<InventoryPanelProps> = ({ gameState }) => {
       </div>
 
       {/* Inventory Items */}
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         {inventoryItems.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
-            <p>Your cargo hold is empty</p>
+          <div className="text-center py-6 sm:py-8 text-gray-500">
+            <Package className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 opacity-50" />
+            <p className="text-sm sm:text-base">Your cargo hold is empty</p>
             <p className="text-xs">Buy goods to start trading!</p>
           </div>
         ) : (
@@ -84,16 +84,16 @@ const InventoryPanel: React.FC<InventoryPanelProps> = ({ gameState }) => {
               key={item.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex justify-between items-center p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border"
+              className="flex justify-between items-center p-2 sm:p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border"
             >
               <div>
-                <div className="font-semibold text-gray-800">{item.name}</div>
+                <div className="font-semibold text-gray-800 text-sm sm:text-base">{item.name}</div>
                 <div className="text-xs text-gray-500">
                   Est. value: {Math.round(item.quantity * item.basePrice * 0.8)}g
                 </div>
               </div>
               <div className="text-right">
-                <div className="font-bold text-blue-600">{item.quantity}</div>
+                <div className="font-bold text-blue-600 text-sm sm:text-base">{item.quantity}</div>
                 <div className="text-xs text-gray-500">units</div>
               </div>
             </motion.div>

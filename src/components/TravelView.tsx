@@ -18,25 +18,25 @@ const TravelView: React.FC<TravelViewProps> = ({ gameState, onSelectTown, onCanc
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-gradient-to-b from-amber-50 to-orange-100 rounded-2xl shadow-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        className="bg-gradient-to-b from-amber-50 to-orange-100 rounded-2xl shadow-2xl p-4 sm:p-6 lg:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
       >
-        <div className="text-center mb-8">
-          <h2 className="text-4xl font-bold text-gray-800 font-serif mb-2">
+        <div className="text-center mb-6 sm:mb-8">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 font-serif mb-2">
             Choose Your Destination
           </h2>
-          <p className="text-gray-600">
+          <p className="text-gray-600 text-sm sm:text-base">
             Currently in <span className="font-semibold text-amber-600">{currentTown.name}</span>
             • Turn {gameState.turn}/{gameState.maxTurns}
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {towns.map((town, index) => {
             const isCurrentTown = town.id === gameState.currentTownId;
             
@@ -46,7 +46,7 @@ const TravelView: React.FC<TravelViewProps> = ({ gameState, onSelectTown, onCanc
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className={`relative p-6 rounded-xl border-2 transition-all cursor-pointer ${
+                className={`relative p-4 sm:p-6 rounded-xl border-2 transition-all cursor-pointer ${
                   isCurrentTown
                     ? 'bg-amber-100 border-amber-400 cursor-default'
                     : 'bg-white/80 border-amber-200 hover:border-amber-400 hover:shadow-lg transform hover:scale-105'
@@ -59,18 +59,18 @@ const TravelView: React.FC<TravelViewProps> = ({ gameState, onSelectTown, onCanc
                   </div>
                 )}
 
-                <div className="flex items-start gap-4">
-                  <div className={`p-3 rounded-lg ${
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className={`p-2 sm:p-3 rounded-lg ${
                     isCurrentTown ? 'bg-amber-200' : 'bg-amber-100'
                   }`}>
-                    <MapPin className="w-6 h-6 text-amber-600" />
+                    <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" />
                   </div>
                   
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-800 font-serif mb-2">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-800 font-serif mb-2">
                       {town.name}
                     </h3>
-                    <p className="text-gray-600 text-sm mb-3 leading-relaxed">
+                    <p className="text-gray-600 text-xs sm:text-sm mb-3 leading-relaxed">
                       {town.description}
                     </p>
                     
@@ -107,7 +107,7 @@ const TravelView: React.FC<TravelViewProps> = ({ gameState, onSelectTown, onCanc
         <div className="text-center">
           <button
             onClick={onCancel}
-            className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+            className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-6 sm:py-3 sm:px-8 rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 text-sm sm:text-base"
           >
             Stay in {currentTown.name}
           </button>
